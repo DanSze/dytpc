@@ -1,0 +1,9 @@
+{
+	"name": "dytpc",
+	"description": "A minimal D application.",
+	"copyright": "Copyright © 2015, DanSze",
+	"authors": ["DanSze"],
+	"dependencies": {
+		"wave-d": "~>1.0.2"
+	}
+}
