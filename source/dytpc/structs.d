@@ -1,4 +1,4 @@
-module dytpc;
+module dytpc.structs;
 
 import waved;
 
@@ -25,14 +25,14 @@ struct AudioData {
 	}
 	
 	/// Constructs a wave-d Sound struct from the AudioData.
-	Sound* rebuildRaws() {
+	Sound rebuildRaws() {
 		float[] newData = [];
 		for (int i = 0; i < channels[0].length; i++) {
 			for (int j = 0; j < channels.length; j++) {
 				newData ~= channels[j][i];
 			}
 		}
-		auto ret = new Sound;
+		Sound ret;
 		ret.data = newData;
 		ret.sampleRate = sampleRate;
 		ret.numChannels = channels.length;
