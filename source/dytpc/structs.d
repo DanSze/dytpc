@@ -42,12 +42,13 @@ struct AudioData {
 
 /// A sound clip
 struct Clip {
-	/// The starting frame of the clip.
-	int frame;
-	/// The length of the clip, in frames.
-	int length;
-	/// The dominant pitch of the clip, as determined by fft. If the clip is
-	/// silent, this is set to 0.
+	/// The audio of the clip
+	float[] clip;
+
+	/**
+	 * The dominant pitch of the clip, as determined by fft.
+	 * If the clip is silent, this is set to 0.
+	 */
 	float pitch;
 	/**
 	 * The purity of the dominant pitch. The purity is defined as:
@@ -55,5 +56,6 @@ struct Clip {
 	 * As a result, this value can only range from 0.0 to 1.0.
 	 * If the clip is silent, the purity is set to 0.
 	 */
-	 float purity;
+	float purity;
+
 }

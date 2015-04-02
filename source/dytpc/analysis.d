@@ -12,7 +12,6 @@ int minPo2 (int min) {
 	return cast(int)(2 ^^ ceil(log2(min)));
 }
 
-
 /**
  * Analyses a channel, generating clip informaton for each interval.
  *
@@ -46,8 +45,7 @@ Clip[] analyze (float[] samples, int interval) {
 		auto indexes = new int[result.length];
 		topNIndex(result, indexes, SortOutput.yes);
 
-		Clip c = Clip(i + intervalOffset,
-					  interval,
+		Clip c = Clip(samples[i + intervalOffset .. i + intervalOffset + interval],
 					  cast(float)(indexes[$ - 1])/po2Interval,
 					  result[indexes[$ - 1]]/result.sum());
 		clips ~= c;
