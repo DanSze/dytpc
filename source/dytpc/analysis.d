@@ -12,6 +12,12 @@ int minPo2 (int min) {
 	return cast(int)(2 ^^ ceil(log2(min)));
 }
 
+/// Finds the largest power of two below a maximum value
+int maxPo2 (int min) {
+	return cast(int)(2 ^^ floor(log2(min)));
+}
+
+
 /**
  * Analyses a channel, generating clip informaton for each interval.
  *
@@ -45,7 +51,8 @@ Clip[] analyze (float[] samples, int interval) {
 		auto indexes = new int[result.length];
 		topNIndex(result, indexes, SortOutput.yes);
 
-		Clip c = Clip(samples[i + intervalOffset .. i + intervalOffset + interval],
+		Clip c = Clip(samples[i .. i + po2Interval],
+					  intervalOffset,
 					  cast(float)(indexes[$ - 1])/po2Interval,
 					  result[indexes[$ - 1]]/result.sum());
 		clips ~= c;

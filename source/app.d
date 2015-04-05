@@ -18,14 +18,20 @@ void main() {
 
     foreach (i, result; results) {
     	if (result.purity > 0.01){
-    		pureSound ~= result.clip;
-    		writefln("%s | %s", result.pitch, result.purity);
+            auto r = new Resampler(result);
+            auto newSample = r.resample(6000);
+    		pureSound ~= newSample;
+    		writefln("%s | %s | %s", result.pitch, result.purity, avgDiff(result.clip, newSample));
     	}
-    }
-    foreach(i; 0 .. 5)
-    {
-    	pureSound ~= pureSound;
     }
     s.channels = [pureSound];
     s.rebuildRaws().encodeWAV("test2.wav");
+}
+
+float avgDiff (float[] a, float[] b) {
+    float r = 0f;
+    for (int i = 0; i < a.length; i++) {
+        r += a[i] - b[i];
+    }
+    return r/a.length;
 }

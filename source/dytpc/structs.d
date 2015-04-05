@@ -42,14 +42,23 @@ struct AudioData {
 
 /// A sound clip
 struct Clip {
-	/// The audio of the clip
-	float[] clip;
+	/// The power of 2 length audio of the clip
+	float[] trueClip;
+
+	///The offset between the true and pervieved clips
+	int offset;
+
+	///The percieved clip that should be used as a sample. Read Only.
+	@property float[] clip() {
+		return trueClip[offset .. $ - offset];
+	}
 
 	/**
 	 * The dominant pitch of the clip, as determined by fft.
 	 * If the clip is silent, this is set to 0.
 	 */
 	float pitch;
+
 	/**
 	 * The purity of the dominant pitch. The purity is defined as:
 	 * (magnitude of dominant pitch)/(total magnitude of pitches)
