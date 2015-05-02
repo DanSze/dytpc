@@ -18,10 +18,9 @@ void main() {
 
     foreach (i, result; results) {
     	if (result.purity > 0.01){
-            auto r = new Resampler(result);
-            auto newSample = r.resample(6000);
-    		pureSound ~= newSample;
-    		writefln("%s | %s | %s", result.pitch, result.purity, avgDiff(result.clip, newSample));
+            auto newSample = pitchShift(result, 3);
+    		pureSound ~= newSample.clip;
+    		writefln("%s | %s | %s", result.pitch, result.purity, avgDiff(result.clip, newSample.clip));
     	}
     }
     s.channels = [pureSound];
