@@ -19,11 +19,17 @@ void main() {
     writefln("Sample samplerate = %s", voice.sampleRate);
     writefln("Sample frames = %s", voice.channels[0].length);
 
+    AudioData[3] voices;
+    for (int i = 0; i < 3; i++) {
+        voices[i] = voice;
+        voices[i].channels = [voice.channels[0][i*$/3..(i+1)*$/3]];
+    }
+
     float[][] layers;
 
-    foreach (i; [2,4,6]) {
+    foreach (i, nth; [2,4,6]) {
         try {
-            layers ~= [frankenmix(music, voice, i)];
+            layers ~= [frankenmix(music, voice, nth)];
             } catch (Exception e){}
     }
 
