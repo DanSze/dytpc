@@ -4,8 +4,7 @@ module dytpc.transform;
 import std.numeric;
 import std.algorithm;
 import std.math;
-
-import std.stdio;
+import std.exception;
 
 import dytpc;
 
@@ -13,7 +12,7 @@ import dytpc;
 /// This method will fail if the resulting pitch is negative or larger than 1.
 /// A lot of distortion is expected, this is intended.
 Clip pitchShift (Clip c, float percent) {
-	assert(percent > -1.0 && c.pitch * (1 + percent) < 1);
+	enforce(percent >= -1.0 && c.pitch * (1 + percent) < 1, "Resulting pitch out of range");
 
 	Fft fft = new Fft (c.trueClip.length);
 
@@ -30,4 +29,8 @@ Clip pitchShift (Clip c, float percent) {
 	newSample = newSample.reduce!((a, b) => a ~ b.re)(fft.inverseFft(data));
 
 	return Clip (newSample, c.offset, c.pitch + c.pitch*percent, c.purity);
+}
+
+Sample pitchShift (Sample s, float percent) {
+	return pitchShift (s.data, percent).samplify();
 }

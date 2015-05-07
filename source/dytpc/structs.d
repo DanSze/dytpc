@@ -68,3 +68,20 @@ struct Clip {
 	float purity;
 
 }
+
+/// A sample, for use in synthesis
+struct Sample {
+
+	/// The underlying Clip
+	Clip data;
+	alias data this;
+
+	/// The maximum upwards/downwards pitch shift coefficient for this sample
+	double up;
+	double down;
+
+	/// The range containing the top 50 frequencies
+	int[2] range;
+
+}
+

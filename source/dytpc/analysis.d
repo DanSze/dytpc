@@ -3,9 +3,10 @@ module dytpc.analysis;
 import std.math;
 import std.numeric;
 import std.algorithm;
-import std.stdio;
+import std.array;
+import std.exception;
 
-import dytpc.structs;
+import dytpc;
 
 /// Finds the smallest power of two above a minimum value
 int minPo2 (int min) {
@@ -58,4 +59,51 @@ Clip[] analyze (float[] samples, int interval) {
 		clips ~= c;
 	}
 	return clips;
+}
+
+/// Constructs a set of Samples from a set of equal length clips.
+Sample[] samplify (Clip[] clips) {
+	Fft fft = new Fft(clips[0].trueClip.length);
+	Sample[] samples;
+
+	foreach (c; clips) 
+		samples ~= samplify(c, fft);
+	return samples;
+}
+
+Sample samplify (Clip clip, Fft fft) {
+	auto data = fft.fft(clip.trueClip).map!(a => a.re ^^ 2 + a.im ^^ 2);
+	int[] indexes = new int[50];
+	topNIndex(data, indexes, SortOutput.no);
+	sort(indexes);
+	return Sample (clip,
+	               cast(double)(clip.trueClip.length)/indexes[$-1],
+	               (clip.pitch*clip.trueClip.length - indexes[0])/clip.pitch*clip.trueClip.length,
+	               [indexes[0], indexes[$-1]]);
+}
+
+Sample samplify (Clip clip) {
+	return samplify(clip, new Fft(clip.trueClip.length));
+}
+
+Sample[] remix (Sample[] samples, Sample[] target) {
+	foreach (i, t; target) {
+		target[i] = closestMatch(samples, t);
+	}
+	return target;
+}
+
+private:
+Sample closestMatch (Sample[] samples, Sample target) {
+	auto validSamples = samples.filter!(a => a.canBecome(target)).array;
+
+	enforce(validSamples.length > 0, "No valid samples found!");
+
+	validSamples.sort!((a, b) => (a.pitch - target.pitch) ^^ 2 < (b.pitch - target.pitch) ^^ 2);
+
+	return pitchShift(validSamples[0], target.pitch/validSamples[0].pitch - 1);
+}
+
+bool canBecome (Sample from, Sample into) {
+	return from.pitch*from.up > into.pitch && from.pitch*from.down < into.pitch;
 }
