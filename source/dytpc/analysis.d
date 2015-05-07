@@ -6,6 +6,8 @@ import std.algorithm;
 import std.array;
 import std.exception;
 
+import std.stdio;
+
 import dytpc;
 
 /// Finds the smallest power of two above a minimum value
@@ -42,9 +44,8 @@ Clip[] analyze (float[] samples, int interval) {
 
 	Fft fft = new Fft(po2Interval);
 	Clip[] clips;
-
 	for (int i = dataOffset - intervalOffset;
-		 i < samples.length - dataOffset - intervalOffset;
+		 i < samples.length - po2Interval;
 		 i += interval) {
 		auto result = fft.fft(samples[i..i+po2Interval])
 		              .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);

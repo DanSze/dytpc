@@ -2,6 +2,7 @@
 import std.stdio;
 import std.algorithm;
 import std.array;
+import std.range;
 import std.math;
 import waved;
 import dytpc;
@@ -18,27 +19,47 @@ void main() {
     writefln("Sample samplerate = %s", voice.sampleRate);
     writefln("Sample frames = %s", voice.channels[0].length);
 
-    float[] mix;
-    int fraction = 3;
+    float[][] layers;
+
+    foreach (i; [2,4,6]) {
+        try {
+            layers ~= [frankenmix(music, voice, i)];
+            } catch (Exception e){}
+    }
+
+    layers.sort!"a.length < b.length";
+    int minl = layers[0].length;
+
+    float[] mergedTrack = (0f).repeat(minl).array;
+    foreach (layer; layers) {
+        for (int i = 0; i < minl; i ++)
+            mergedTrack[i] += layer[i]/3;
+    }
+
+    voice.channels = [mergedTrack];
+    voice.rebuildRaws.encodeWAV("remix.wav");
+}
+
+float[] frankenmix (AudioData music, AudioData voice, int fraction) {
+    float[] r;
+    float[] seed;
     auto sample = voice.channels[0]
                   .analyze(voice.sampleRate/fraction)
                   .samplify
-                  //.filter!"a.purity > 0.02"
                   .array;
 
     int interval = music.sampleRate;
 
     voice.channels = uninitializedArray!(float[][])(1,0);
-    for (int i = interval/fraction; i + 7*interval/fraction < music.channels[0].length; i += interval) {
-        writeln ("done chunk ", (i - interval/fraction)/interval);
-        auto target = music.channels[0][i - interval/fraction..i + 7*interval/fraction]
+    for (int i = interval/fraction; i + (fraction + 1)*interval/fraction < music.channels[0].length; i += interval) {
+        writeln (fraction, " ", i/interval);
+        auto target = music.channels[0][i - interval/fraction..i + (fraction + 1)*interval/fraction]
                       .analyze(music.sampleRate/fraction)
                       .samplify;
 
         
-        voice.channels[0] ~= mix.reduce!"a ~ b.clip"(remix(sample, target));
+        r ~= seed.reduce!"a ~ b.clip"(remix(sample, target));
         delete target;
     }
-
-    voice.rebuildRaws.encodeWAV("remix.wav");
+    return r;
 }
