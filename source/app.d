@@ -22,7 +22,6 @@ int[] intervals;
 string targetFile = "target.wav";
 string sampleFile = "sample.wav";
 string outputFile = "out.wav";
-alias required = std.getopt.config.required;
 
 
 void main(string[] args) {
@@ -40,7 +39,7 @@ void main(string[] args) {
                 "The wav file containing target audio. Default: target.wav",  &targetFile,
             "intervals|i",
                 "The fraction of a second at which to analyse the audio. "~
-                "Multiple comma separated values are overlayed. Default: 2,3,6",  &intervals
+                "Multiple comma separated values are overlayed. Default: 2,4,8",  &intervals
         );
     } catch (Exception e) {
         result.helpWanted = true;
@@ -52,7 +51,7 @@ void main(string[] args) {
         exit(0);
     }
 
-    if (!intervals) intervals = [2,3,6];
+    if (!intervals) intervals = [2,4,8];
 
     AudioData target = AudioData(decodeWAV(targetFile));
     AudioData sample = AudioData(decodeWAV(sampleFile));
@@ -84,10 +83,18 @@ void main(string[] args) {
     foreach (i, nth; intervals) {
         try {
             layers ~= [frankenmix(target, sample, nth)];
-            } catch (Exception e){}
+        } catch (Exception e){
+            writefln("\nCouldn't generate the 1/%s interval track; dropping.", nth);
+        }
     }
 
-    int minl = layers[0].length;
+    int minl;
+    try {
+        minl = layers[0].length;
+    } catch (Exception e) {
+        writeln("No tracks generated!");
+        exit(0);
+    }
 
     float[] mergedTrack = (0f).repeat(minl).array;
     foreach (layer; layers) {
