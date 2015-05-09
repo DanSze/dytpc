@@ -18,7 +18,7 @@ int progress;
 string formatString;
 
 //getopt stuff
-int[] intervals = [2,3,6];
+int[] intervals;
 string targetFile = "target.wav";
 string sampleFile = "sample.wav";
 string outputFile = "out.wav";
@@ -40,7 +40,7 @@ void main(string[] args) {
                 "The wav file containing target audio. Default: target.wav",  &targetFile,
             "intervals|i",
                 "The fraction of a second at which to analyse the audio. "~
-                "Multiple values are overlayed. Default: [2,3,6]",  &intervals
+                "Multiple comma separated values are overlayed. Default: 2,3,6",  &intervals
         );
     } catch (Exception e) {
         result.helpWanted = true;
@@ -52,16 +52,24 @@ void main(string[] args) {
         exit(0);
     }
 
+    if (!intervals) intervals = [2,3,6];
+
     AudioData target = AudioData(decodeWAV(targetFile));
     AudioData sample = AudioData(decodeWAV(sampleFile));
+
+    writefln("Combining %s and %s into %s", targetFile, sampleFile, outputFile);
+    writefln("Using sample rates %s", intervals);
+    writeln();
 
     writefln("Target channels = %s", target.channels.length);
     writefln("Target samplerate = %s", target.sampleRate);
     writefln("Target frames = %s", target.channels[0].length);
+    writeln();
 
     writefln("Sample channels = %s", sample.channels.length);
     writefln("Sample samplerate = %s", sample.sampleRate);
     writefln("Sample frames = %s", sample.channels[0].length);
+    writeln();
 
     AudioData[3] voices;
     for (int i = 0; i < 3; i++) {
@@ -96,12 +104,12 @@ float[] frankenmix (AudioData music, AudioData voice, int fraction) {
     *progressPointer = 0;
 
     auto sample = voice.channels[0]
-                  .analyze(voice.sampleRate/fraction)
+                  .analyze(cast(int)ceil(cast(float)voice.sampleRate/fraction))
                   .samplify
                   .array;
 
     int second = music.sampleRate;
-    int interval = second/fraction;
+    int interval = cast(int)ceil(cast(float)second/fraction);
     float[] seed;
 
     float[][] intervals;

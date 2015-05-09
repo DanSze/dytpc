@@ -71,7 +71,6 @@ struct Clip {
 
 /// A sample, for use in synthesis
 struct Sample {
-
 	/// The underlying Clip
 	Clip data;
 	alias data this;
@@ -82,6 +81,5 @@ struct Sample {
 
 	/// The range containing the top 50 frequencies
 	int[2] range;
-
 }
 
