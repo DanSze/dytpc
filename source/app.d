@@ -4,68 +4,124 @@ import std.algorithm;
 import std.array;
 import std.range;
 import std.math;
+import std.string;
+import std.parallelism;
+import std.getopt;
+import std.c.stdlib;
+
 import waved;
 import dytpc;
 
-void main() {
-    AudioData music = AudioData(decodeWAV("music.wav"));
-    AudioData voice = AudioData(decodeWAV("test.wav"));
+//Thread sync stuff
+TaskPool threadpool;
+int progress;
+string formatString;
 
-    writefln("Target channels = %s", music.channels.length);
-    writefln("Target samplerate = %s", music.sampleRate);
-    writefln("Target frames = %s", music.channels[0].length);
+//getopt stuff
+int[] intervals = [2,3,6];
+string targetFile = "target.wav";
+string sampleFile = "sample.wav";
+string outputFile = "out.wav";
+alias required = std.getopt.config.required;
 
-    writefln("Sample channels = %s", voice.channels.length);
-    writefln("Sample samplerate = %s", voice.sampleRate);
-    writefln("Sample frames = %s", voice.channels[0].length);
+
+void main(string[] args) {
+
+    arraySep = ",";
+
+    GetoptResult result;
+    try {
+        result = getopt(args,
+            "output|o",
+                "The output file. Default: out.wav",  &sampleFile,
+            "sample|s",
+                "The wav file containing sample audip. Default: sample.wav",  &sampleFile,
+            "target|t",
+                "The wav file containing target audio. Default: target.wav",  &targetFile,
+            "intervals|i",
+                "The fraction of a second at which to analyse the audio. "~
+                "Multiple values are overlayed. Default: [2,3,6]",  &intervals
+        );
+    } catch (Exception e) {
+        result.helpWanted = true;
+    } 
+
+    if (result.helpWanted) {
+        defaultGetoptPrinter("The DYTPC remix compiler generates a remix of the target file "
+            ~ "from the requested samples.", result.options);
+        exit(0);
+    }
+
+    AudioData target = AudioData(decodeWAV(targetFile));
+    AudioData sample = AudioData(decodeWAV(sampleFile));
+
+    writefln("Target channels = %s", target.channels.length);
+    writefln("Target samplerate = %s", target.sampleRate);
+    writefln("Target frames = %s", target.channels[0].length);
+
+    writefln("Sample channels = %s", sample.channels.length);
+    writefln("Sample samplerate = %s", sample.sampleRate);
+    writefln("Sample frames = %s", sample.channels[0].length);
 
     AudioData[3] voices;
     for (int i = 0; i < 3; i++) {
-        voices[i] = voice;
-        voices[i].channels = [voice.channels[0][i*$/3..(i+1)*$/3]];
+        voices[i] = sample;
+        voices[i].channels = [sample.channels[0][i*$/3..(i+1)*$/3]];
     }
 
     float[][] layers;
 
-    foreach (i, nth; [2,4,6]) {
+    threadpool = taskPool();
+
+    foreach (i, nth; intervals) {
         try {
-            layers ~= [frankenmix(music, voice, nth)];
+            layers ~= [frankenmix(target, sample, nth)];
             } catch (Exception e){}
     }
 
-    layers.sort!"a.length < b.length";
     int minl = layers[0].length;
 
     float[] mergedTrack = (0f).repeat(minl).array;
     foreach (layer; layers) {
-        for (int i = 0; i < minl; i ++)
-            mergedTrack[i] += layer[i]/3;
+        mergedTrack[] += layer[];
     }
 
-    voice.channels = [mergedTrack];
-    voice.rebuildRaws.encodeWAV("remix.wav");
+    sample.channels = [mergedTrack];
+    sample.rebuildRaws.encodeWAV(outputFile);
 }
 
 float[] frankenmix (AudioData music, AudioData voice, int fraction) {
-    float[] r;
-    float[] seed;
+    writeln("interval ", fraction);
+    int* progressPointer = &progress;
+    *progressPointer = 0;
+
     auto sample = voice.channels[0]
                   .analyze(voice.sampleRate/fraction)
                   .samplify
                   .array;
 
-    int interval = music.sampleRate;
+    int second = music.sampleRate;
+    int interval = second/fraction;
+    float[] seed;
 
-    voice.channels = uninitializedArray!(float[][])(1,0);
-    for (int i = interval/fraction; i + (fraction + 1)*interval/fraction < music.channels[0].length; i += interval) {
-        writeln (fraction, " ", i/interval);
-        auto target = music.channels[0][i - interval/fraction..i + (fraction + 1)*interval/fraction]
-                      .analyze(music.sampleRate/fraction)
+    float[][] intervals;
+    for (int i = interval;
+         i + second + interval < music.channels[0].length;
+         i += second) {
+        intervals ~= [music.channels[0][i - interval .. i + second + interval]];
+    }
+
+    float[] r = new float[music.channels[0].length];
+    formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(intervals.length)));
+    foreach (i, interv; threadpool.parallel(intervals)){
+        (*progressPointer)++;
+        writef(formatString, *progressPointer, intervals.length);
+        fflush(core.stdc.stdio.stdout);
+        auto target = interv.analyze(interval)
                       .samplify;
-
-        
-        r ~= seed.reduce!"a ~ b.clip"(remix(sample, target));
+        r[interval + i*second .. interval + (i+1)*second] = seed.reduce!"a ~ b.clip"(remix(sample, target))[0..second];
         delete target;
     }
+    writefln(formatString, *progressPointer, intervals.length);
     return r;
 }
