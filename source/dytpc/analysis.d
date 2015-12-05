@@ -39,10 +39,10 @@ int maxPo2 (int min) {
  *
  */
 Clip[] analyze (float[] samples, int interval) {
+
 	int po2Interval = minPo2(interval);
 	int intervalOffset = (po2Interval - interval)/2;
-	int dataOffset = cast(int)(remainder(samples.length, interval)/2 + interval);
-
+	int dataOffset = cast(int)(samples.length - (samples.length / interval)*interval)/2 + interval;
 	Fft fft = new Fft(po2Interval);
 	Clip[] clips;
 	for (int i = dataOffset - intervalOffset;
@@ -50,7 +50,6 @@ Clip[] analyze (float[] samples, int interval) {
 		 i += interval) {
 		auto result = fft.fft(samples[i..i+po2Interval])
 		              .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);
-
 		auto indexes = new int[result.length];
 		makeIndex(result, indexes);
 
