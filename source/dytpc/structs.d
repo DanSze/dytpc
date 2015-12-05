@@ -43,17 +43,18 @@ struct AudioData {
 /// A sound clip
 struct Clip {
 	/// The power of 2 length audio of the clip
-	float[] trueClip;
+	float[] origin;
 
 	/// The list of frequencies, sorted by strength (ascending)
 	int[] freqs;
 
 	///The offset between the true and pervieved clips
 	int offset;
+	int length;
 
 	///The percieved clip that should be used as a sample. Read Only.
 	@property float[] clip() {
-		return trueClip[offset .. $ - offset];
+		return origin[offset .. offset + length];
 	}
 
 }

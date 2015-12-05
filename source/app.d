@@ -20,7 +20,7 @@ string formatString;
 //getopt stuff
 int[] intervals;
 string targetFile = "target.wav";
-string sampleFile = "sample.wav";
+string[] sampleFile;
 string outputFile = "out.wav";
 
 
@@ -53,35 +53,23 @@ void main(string[] args) {
 
     if (!intervals) intervals = [2,4];
 
-    AudioData target = AudioData(decodeWAV(targetFile));
-    AudioData sample = AudioData(decodeWAV(sampleFile));
+    if (!sampleFile) sampleFile = ["sample.wav"];
 
-    writefln("Combining %s and %s into %s", targetFile, sampleFile, outputFile);
+    AudioData target = AudioData(decodeWAV(targetFile));
+    AudioData[] samples;
+    foreach (f; sampleFile) {
+        samples ~= [AudioData(decodeWAV(f))];
+    }
+
     writefln("Using sample rates %s", intervals);
     writeln();
-
-    writefln("Target channels = %s", target.channels.length);
-    writefln("Target samplerate = %s", target.sampleRate);
-    writefln("Target frames = %s", target.channels[0].length);
-    writeln();
-
-    writefln("Sample channels = %s", sample.channels.length);
-    writefln("Sample samplerate = %s", sample.sampleRate);
-    writefln("Sample frames = %s", sample.channels[0].length);
-    writeln();
-
-    AudioData[3] voices;
-    for (int i = 0; i < 3; i++) {
-        voices[i] = sample;
-        voices[i].channels = [sample.channels[0][i*$/3..(i+1)*$/3]];
-    }
 
     float[][] layers;
 
     threadpool = taskPool();
 
     foreach (i, nth; intervals) {
-        layers ~= [frankenmix(target, sample, nth)];
+        layers ~= [frankenmix(target, samples, nth)];
     }
 
     uint minl;
@@ -110,18 +98,23 @@ void main(string[] args) {
         mergedTrack[] += smoothedLayer[];
     }
 
-    sample.channels = [mergedTrack];
-    sample.rebuildRaws.encodeWAV(outputFile);
+    target.channels = [mergedTrack];
+    target.rebuildRaws.encodeWAV(outputFile);
 }
 
-float[] frankenmix (AudioData music, AudioData voice, float fraction) {
+float[] frankenmix (AudioData music, AudioData[] samples, float fraction) {
     writeln("interval ", fraction);
     int* progressPointer = &progress;
     *progressPointer = 0;
     writeln("Analyzing...");
-    auto sample = voice.channels[0]
-                  .analyze(cast(int)ceil(voice.sampleRate/fraction))
+
+    Clip[] sample;
+    foreach (s; samples) {
+        sample ~= s.channels[0]
+                  .analyze(cast(int)ceil(s.sampleRate/fraction))
                   .array;
+
+    }
 
     int second = music.sampleRate;
     int interval = cast(int)ceil(cast(float)second/fraction);

@@ -53,9 +53,10 @@ Clip[] analyze (float[] samples, int interval) {
 		auto indexes = new int[result.length];
 		makeIndex(result, indexes);
 
-		Clip c = Clip(samples[i .. i + po2Interval],
+		Clip c = Clip(samples,
 					  indexes[0..10],
-					  intervalOffset);
+					  i,
+					  interval);
 		clips ~= c;
 	}
 	return clips;
