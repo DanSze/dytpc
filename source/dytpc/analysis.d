@@ -56,9 +56,9 @@ Clip[] analyze (float[] samples, int interval) {
 		              .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);
 		auto indexes = new int[result.length];
 		makeIndex(result, indexes);
-
+		reverse(indexes);
 		Clip c = Clip(samples,
-					  indexes[0..20],
+					  indexes[0 .. 200],
 					  i,
 					  interval);
 		clips ~= c;

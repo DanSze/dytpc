@@ -52,7 +52,7 @@ void main(string[] args) {
     }
 
     if (!intervals){
-        intervals = [2,4];
+        intervals = [1,2];
     } else {
         sort(intervals);
     }
