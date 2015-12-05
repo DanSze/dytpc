@@ -18,7 +18,7 @@ int progress;
 string formatString;
 
 //getopt stuff
-int[] intervals;
+float[] intervals;
 string targetFile = "target.wav";
 string[] sampleFile;
 string outputFile = "out.wav";
@@ -51,7 +51,11 @@ void main(string[] args) {
         exit(0);
     }
 
-    if (!intervals) intervals = [2,4];
+    if (!intervals){
+        intervals = [2,4];
+    } else {
+        sort(intervals);
+    }
 
     if (!sampleFile) sampleFile = ["sample.wav"];
 
@@ -80,7 +84,7 @@ void main(string[] args) {
         exit(0);
     }
 
-    writeln("Mastering...");
+    writeln("Mixing and Mastering...");
     float[] mergedTrack = (0f).repeat(minl).array;
     foreach (layer; layers) {
         auto smoothedLayer = new float[layer.length];
@@ -106,40 +110,29 @@ float[] frankenmix (AudioData music, AudioData[] samples, float fraction) {
     writeln("interval ", fraction);
     int* progressPointer = &progress;
     *progressPointer = 0;
-    writeln("Analyzing...");
+    writeln("Computing Intervals...");
 
-    Clip[] sample;
+    Clip[] sampleClips;
     foreach (s; samples) {
-        sample ~= s.channels[0]
+        sampleClips ~= s.channels[0]
                   .analyze(cast(int)ceil(s.sampleRate/fraction))
                   .array;
-
     }
 
-    int second = music.sampleRate;
-    int interval = cast(int)ceil(cast(float)second/fraction);
+    Clip[] targetClips = music.channels[0]
+                  .analyze(cast(int)ceil(music.sampleRate/fraction))
+                  .array;
 
-    writeln("Computing Intervals...");
-    float[][] intervals;
-    for (int i = interval;
-         i + second + interval < music.channels[0].length;
-         i += second) {
-        intervals ~= [music.channels[0][i - interval .. i + second + interval]];
-    }
-
-
-    writeln("Mixing...");
+    writeln("Optimizing Replacement...");
     float[] r = new float[music.channels[0].length];
-    formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(intervals.length)));
-    foreach (i, interv; intervals){//threadpool.parallel(intervals)){
+    formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(targetClips.length)));
+    foreach (i, clip; targetClips){
         (*progressPointer)++;
-        writef(formatString, *progressPointer, intervals.length);
+        writef(formatString, *progressPointer, targetClips.length);
         fflush(core.stdc.stdio.stdout);
-        auto target = interv.analyze(interval);
         float[] seed;
-        r[interval + i*second .. interval + (i+1)*second] = seed.reduce!"a ~ b.clip"(remix(sample, target)).array[0..second];
-        delete target;
+        r[clip.offset .. clip.offset + clip.length] = remix(sampleClips, clip).clip[];
     }
-    writefln(formatString, *progressPointer, intervals.length);
+    writefln(formatString, *progressPointer, targetClips.length);
     return r;
 }

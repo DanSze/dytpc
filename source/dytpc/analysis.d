@@ -22,6 +22,8 @@ int maxPo2 (int min) {
 }
 
 
+int dataOffset = -1;
+
 /**
  * Analyses a channel, generating clip informaton for each interval.
  *
@@ -42,7 +44,9 @@ Clip[] analyze (float[] samples, int interval) {
 
 	int po2Interval = minPo2(interval);
 	int intervalOffset = (po2Interval - interval)/2;
-	int dataOffset = cast(int)(samples.length - (samples.length / interval)*interval)/2 + interval;
+	if (dataOffset == -1) {
+		dataOffset = cast(int)(samples.length - (samples.length / interval)*interval)/2 + interval;
+	}
 	Fft fft = new Fft(po2Interval);
 	Clip[] clips;
 	for (int i = dataOffset - intervalOffset;
@@ -54,7 +58,7 @@ Clip[] analyze (float[] samples, int interval) {
 		makeIndex(result, indexes);
 
 		Clip c = Clip(samples,
-					  indexes[0..10],
+					  indexes[0..20],
 					  i,
 					  interval);
 		clips ~= c;
@@ -62,15 +66,16 @@ Clip[] analyze (float[] samples, int interval) {
 	return clips;
 }
 
+/*
 Clip[] remix (Clip[] samples, Clip[] target) {
 	foreach (i, t; target) {
 		target[i] = closestMatch(samples, t);
 	}
 	return target;
 }
+*/
 
-private:
-Clip closestMatch (Clip[] samples, Clip target) {
+Clip remix (Clip[] samples, Clip target) {
 	Clip best = samples[0];
 	foreach (a; samples[1..$]) {
 		//writefln("%d < %d", mDist(a.freqs, target.freqs), mDist(best.freqs, target.freqs));
@@ -82,10 +87,12 @@ Clip closestMatch (Clip[] samples, Clip target) {
 
 int mDist (int[] aa, int[] bb) {
 	int r = 0;
+	float factor = 200;
 	//writefln("%d", aa.length);
 	foreach (a, b; lockstep(aa, bb)) {
 		//writefln("%d, %d, %d", a, b, r);
-		r += abs(a - b);
+		r += cast(int)(factor*abs(a - b));
+		factor /= 1.5;
 	}
 	return r;
 }
