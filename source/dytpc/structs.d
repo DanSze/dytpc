@@ -35,7 +35,7 @@ struct AudioData {
 		Sound ret;
 		ret.data = newData;
 		ret.sampleRate = sampleRate;
-		ret.numChannels = channels.length;
+		ret.numChannels = cast(int)channels.length;
 		return ret;
 	}
 }
@@ -45,6 +45,9 @@ struct Clip {
 	/// The power of 2 length audio of the clip
 	float[] trueClip;
 
+	/// The list of frequencies, sorted by strength (ascending)
+	int[] freqs;
+
 	///The offset between the true and pervieved clips
 	int offset;
 
@@ -53,33 +56,5 @@ struct Clip {
 		return trueClip[offset .. $ - offset];
 	}
 
-	/**
-	 * The dominant pitch of the clip, as determined by fft.
-	 * If the clip is silent, this is set to 0.
-	 */
-	float pitch;
-
-	/**
-	 * The purity of the dominant pitch. The purity is defined as:
-	 * (magnitude of dominant pitch)/(total magnitude of pitches)
-	 * As a result, this value can only range from 0.0 to 1.0.
-	 * If the clip is silent, the purity is set to 0.
-	 */
-	float purity;
-
-}
-
-/// A sample, for use in synthesis
-struct Sample {
-	/// The underlying Clip
-	Clip data;
-	alias data this;
-
-	/// The maximum upwards/downwards pitch shift coefficient for this sample
-	double up;
-	double down;
-
-	/// The range containing the top 50 frequencies
-	int[2] range;
 }
 

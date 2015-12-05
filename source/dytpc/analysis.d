@@ -5,6 +5,7 @@ import std.numeric;
 import std.algorithm;
 import std.array;
 import std.exception;
+import std.range;
 
 import std.stdio;
 
@@ -51,43 +52,17 @@ Clip[] analyze (float[] samples, int interval) {
 		              .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);
 
 		auto indexes = new int[result.length];
-		topNIndex(result, indexes, SortOutput.yes);
+		makeIndex(result, indexes);
 
 		Clip c = Clip(samples[i .. i + po2Interval],
-					  intervalOffset,
-					  cast(float)(indexes[$ - 1])/po2Interval,
-					  result[indexes[$ - 1]]/result.sum());
+					  indexes[0..10],
+					  intervalOffset);
 		clips ~= c;
 	}
 	return clips;
 }
 
-/// Constructs a set of Samples from a set of equal length clips.
-Sample[] samplify (Clip[] clips) {
-	Fft fft = new Fft(clips[0].trueClip.length);
-	Sample[] samples;
-
-	foreach (c; clips) 
-		samples ~= samplify(c, fft);
-	return samples;
-}
-
-Sample samplify (Clip clip, Fft fft) {
-	auto data = fft.fft(clip.trueClip).map!(a => a.re ^^ 2 + a.im ^^ 2);
-	int[] indexes = new int[50];
-	topNIndex(data, indexes, SortOutput.no);
-	sort(indexes);
-	return Sample (clip,
-	               cast(double)(clip.trueClip.length)/indexes[$-1],
-	               (clip.pitch*clip.trueClip.length - indexes[0])/clip.pitch*clip.trueClip.length,
-	               [indexes[0], indexes[$-1]]);
-}
-
-Sample samplify (Clip clip) {
-	return samplify(clip, new Fft(clip.trueClip.length));
-}
-
-Sample[] remix (Sample[] samples, Sample[] target) {
+Clip[] remix (Clip[] samples, Clip[] target) {
 	foreach (i, t; target) {
 		target[i] = closestMatch(samples, t);
 	}
@@ -95,16 +70,22 @@ Sample[] remix (Sample[] samples, Sample[] target) {
 }
 
 private:
-Sample closestMatch (Sample[] samples, Sample target) {
-	auto validSamples = samples.filter!(a => a.canBecome(target)).array;
-
-	enforce(validSamples.length > 0, "No valid samples found!");
-
-	validSamples.sort!((a, b) => (a.pitch - target.pitch) ^^ 2 < (b.pitch - target.pitch) ^^ 2);
-
-	return pitchShift(validSamples[0], target.pitch/validSamples[0].pitch - 1);
+Clip closestMatch (Clip[] samples, Clip target) {
+	Clip best = samples[0];
+	foreach (a; samples[1..$]) {
+		//writefln("%d < %d", mDist(a.freqs, target.freqs), mDist(best.freqs, target.freqs));
+		if (mDist(a.freqs, target.freqs) < mDist(best.freqs, target.freqs))
+			best = a;
+	}
+	return best;
 }
 
-bool canBecome (Sample from, Sample into) {
-	return from.pitch*from.up > into.pitch && from.pitch*from.down < into.pitch;
+int mDist (int[] aa, int[] bb) {
+	int r = 0;
+	//writefln("%d", aa.length);
+	foreach (a, b; lockstep(aa, bb)) {
+		//writefln("%d, %d, %d", a, b, r);
+		r += abs(a - b);
+	}
+	return r;
 }

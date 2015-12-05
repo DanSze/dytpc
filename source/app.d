@@ -88,9 +88,9 @@ void main(string[] args) {
         }
     }
 
-    int minl;
+    uint minl;
     try {
-        minl = layers[0].length;
+        minl = cast(uint)layers[0].length;
     } catch (Exception e) {
         writeln("No tracks generated!");
         exit(0);
@@ -105,20 +105,20 @@ void main(string[] args) {
     sample.rebuildRaws.encodeWAV(outputFile);
 }
 
-float[] frankenmix (AudioData music, AudioData voice, int fraction) {
+float[] frankenmix (AudioData music, AudioData voice, float fraction) {
     writeln("interval ", fraction);
     int* progressPointer = &progress;
     *progressPointer = 0;
-
+    writeln("Analyzing...");
     auto sample = voice.channels[0]
-                  .analyze(cast(int)ceil(cast(float)voice.sampleRate/fraction))
-                  .samplify
+                  .analyze(cast(int)ceil(voice.sampleRate/fraction))
                   .array;
 
     int second = music.sampleRate;
     int interval = cast(int)ceil(cast(float)second/fraction);
     float[] seed;
 
+    writeln("Computing Intervals...");
     float[][] intervals;
     for (int i = interval;
          i + second + interval < music.channels[0].length;
@@ -126,14 +126,15 @@ float[] frankenmix (AudioData music, AudioData voice, int fraction) {
         intervals ~= [music.channels[0][i - interval .. i + second + interval]];
     }
 
+
+    writeln("Mixing...");
     float[] r = new float[music.channels[0].length];
     formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(intervals.length)));
     foreach (i, interv; threadpool.parallel(intervals)){
         (*progressPointer)++;
         writef(formatString, *progressPointer, intervals.length);
         fflush(core.stdc.stdio.stdout);
-        auto target = interv.analyze(interval)
-                      .samplify;
+        auto target = interv.analyze(interval);
         r[interval + i*second .. interval + (i+1)*second] = seed.reduce!"a ~ b.clip"(remix(sample, target))[0..second];
         delete target;
     }
