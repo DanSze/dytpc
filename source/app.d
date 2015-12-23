@@ -86,7 +86,7 @@ void main(string[] args) {
 
     writeln("Mixing and Mastering...");
     float[] mergedTrack = (0f).repeat(minl).array;
-    foreach (layer; layers) {
+    foreach (inter, layer; layers) {
         auto smoothedLayer = new float[layer.length];
 
         foreach (i; 2 .. layer.length - 2) {
@@ -126,12 +126,14 @@ float[] frankenmix (AudioData music, AudioData[] samples, float fraction) {
     writeln("Optimizing Replacement...");
     float[] r = new float[music.channels[0].length];
     formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(targetClips.length)));
+    Clip lastClip = Clip();
     foreach (i, clip; targetClips){
         (*progressPointer)++;
         writef(formatString, *progressPointer, targetClips.length);
         fflush(core.stdc.stdio.stdout);
         float[] seed;
-        r[clip.offset .. clip.offset + clip.length] = remix(sampleClips, clip).clip[];
+        lastClip = remix(sampleClips, clip, lastClip, fraction);
+        r[clip.offset .. clip.offset + clip.length] = lastClip.clip[];
     }
     writefln(formatString, *progressPointer, targetClips.length);
     return r;

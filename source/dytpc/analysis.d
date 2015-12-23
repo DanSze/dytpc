@@ -53,12 +53,12 @@ Clip[] analyze (float[] samples, int interval) {
 		 i < samples.length - po2Interval;
 		 i += interval) {
 		auto result = fft.fft(samples[i..i+po2Interval])
-		              .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);
+		             .map!(a => sqrt(a.re ^^ 2 + a.im ^^ 2)/po2Interval);
 		auto indexes = new int[result.length];
 		makeIndex(result, indexes);
 		reverse(indexes);
 		Clip c = Clip(samples,
-					  indexes[0 .. 200],
+					  cast(float[])indexes[0 .. 200],
 					  i,
 					  interval);
 		clips ~= c;
@@ -75,8 +75,14 @@ Clip[] remix (Clip[] samples, Clip[] target) {
 }
 */
 
-Clip remix (Clip[] samples, Clip target) {
+Clip remix (Clip[] samples, Clip target, Clip previous, float interval) {
 	Clip best = samples[0];
+	float[] freqs = target.freqs;
+	if (previous.freqs){
+		freqs[] *= interval;
+		freqs[] += previous.freqs[];
+		freqs[] /= interval + 1;
+	}
 	foreach (a; samples[1..$]) {
 		//writefln("%d < %d", mDist(a.freqs, target.freqs), mDist(best.freqs, target.freqs));
 		if (mDist(a.freqs, target.freqs) < mDist(best.freqs, target.freqs))
@@ -85,13 +91,13 @@ Clip remix (Clip[] samples, Clip target) {
 	return best;
 }
 
-int mDist (int[] aa, int[] bb) {
-	int r = 0;
+float mDist (float[] aa, float[] bb) {
+	float r = 0;
 	float factor = 200;
 	//writefln("%d", aa.length);
 	foreach (a, b; lockstep(aa, bb)) {
 		//writefln("%d, %d, %d", a, b, r);
-		r += cast(int)(factor*abs(a - b));
+		r += factor*abs(a - b);
 		factor /= 1.5;
 	}
 	return r;

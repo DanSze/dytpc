@@ -46,7 +46,7 @@ struct Clip {
 	float[] origin;
 
 	/// The list of frequencies, sorted by strength (ascending)
-	int[] freqs;
+	float[] freqs;
 
 	///The offset between the true and pervieved clips
 	int offset;
