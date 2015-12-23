@@ -12,11 +12,6 @@ import std.c.stdlib;
 import waved;
 import dytpc;
 
-//Thread sync stuff
-TaskPool threadpool;
-int progress;
-string formatString;
-
 //getopt stuff
 float[] intervals;
 string targetFile = "target.wav";
@@ -69,9 +64,7 @@ void main(string[] args) {
     writeln();
 
     float[][] layers;
-
-    threadpool = taskPool();
-
+    
     foreach (i, nth; intervals) {
         layers ~= [frankenmix(target, samples, nth)];
     }
@@ -98,7 +91,6 @@ void main(string[] args) {
                 1* layer[i + 2]
             )/9;
         }
-
         mergedTrack[] += smoothedLayer[];
     }
 
@@ -108,8 +100,6 @@ void main(string[] args) {
 
 float[] frankenmix (AudioData music, AudioData[] samples, float fraction) {
     writeln("interval ", fraction);
-    int* progressPointer = &progress;
-    *progressPointer = 0;
     writeln("Computing Intervals...");
 
     Clip[] sampleClips;
@@ -125,16 +115,17 @@ float[] frankenmix (AudioData music, AudioData[] samples, float fraction) {
 
     writeln("Optimizing Replacement...");
     float[] r = new float[music.channels[0].length];
-    formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(targetClips.length)));
+    string formatString = "\r%%0%dd/%%d".format(cast(int)ceil(log10(targetClips.length)));
+    int progress = 0;
     Clip lastClip = Clip();
     foreach (i, clip; targetClips){
-        (*progressPointer)++;
-        writef(formatString, *progressPointer, targetClips.length);
+        progress++;
+        writef(formatString, progress, targetClips.length);
         fflush(core.stdc.stdio.stdout);
         float[] seed;
         lastClip = remix(sampleClips, clip, lastClip, fraction);
         r[clip.offset .. clip.offset + clip.length] = lastClip.clip[];
     }
-    writefln(formatString, *progressPointer, targetClips.length);
+    writefln(formatString, progress, targetClips.length);
     return r;
 }
